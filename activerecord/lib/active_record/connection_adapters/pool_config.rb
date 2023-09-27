@@ -18,11 +18,11 @@ module ActiveRecord
 
       class << self
         def discard_pools!
-          INSTANCES.each_key(&:discard_pool!)
+          INSTANCES.each_value(&:discard_pool!)
         end
 
         def disconnect_all!
-          INSTANCES.each_key { |c| c.disconnect!(automatic_reconnect: true) }
+          INSTANCES.each_value { |c| c.disconnect!(automatic_reconnect: true) }
         end
       end
 
@@ -33,7 +33,7 @@ module ActiveRecord
         @role = role
         @shard = shard
         @pool = nil
-        INSTANCES[self] = self
+        INSTANCES[object_id] = self
       end
 
       def connection_name

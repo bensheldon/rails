@@ -147,7 +147,7 @@ module ActiveRecord
           @records << record
         else
           @lazy_enrollment_records ||= ObjectSpace::WeakMap.new
-          @lazy_enrollment_records[record] = record
+          @lazy_enrollment_records[record.object_id] = record
         end
       end
 
