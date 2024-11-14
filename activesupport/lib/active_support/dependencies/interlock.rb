@@ -37,6 +37,10 @@ module ActiveSupport # :nodoc:
         @lock.sharing(&block)
       end
 
+      def running!(&block)
+        @lock.sharing!(&block)
+      end
+
       def permit_concurrent_loads(&block)
         @lock.yield_shares(compatible: [:load], &block)
       end

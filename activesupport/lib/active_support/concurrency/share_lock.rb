@@ -128,6 +128,10 @@ module ActiveSupport
         end
       end
 
+      def start_sharing!
+        @sharing[Thread.current] += 1
+      end
+
       def stop_sharing
         synchronize do
           if @sharing[Thread.current] > 1
@@ -158,6 +162,15 @@ module ActiveSupport
       # Execute the supplied block while holding the Share lock.
       def sharing
         start_sharing
+        begin
+          yield
+        ensure
+          stop_sharing
+        end
+      end
+
+      def sharing!
+        start_sharing!
         begin
           yield
         ensure

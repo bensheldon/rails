@@ -3,6 +3,7 @@
 require "action_dispatch/http/response"
 require "delegate"
 require "active_support/json"
+require "concurrent/atomic/count_down_latch"
 
 module ActionController
   # = Action Controller \Live
@@ -274,12 +275,15 @@ module ActionController
       t1 = Thread.current
       locals = t1.keys.map { |key| [key, t1[key]] }
 
+      sharing_lock_latch = Concurrent::CountDownLatch.new
       error = nil
       # This processes the action in a child thread. It lets us return the
       # response code and headers back up the Rack stack, and still process
       # the body in parallel with sending data to the client.
       new_controller_thread {
-        ActiveSupport::Dependencies.interlock.running do
+        ActiveSupport::Dependencies.interlock.running! do
+          sharing_lock_latch.count_down
+
           t2 = Thread.current
 
           # Since we're processing the view in a different thread, copy the
@@ -309,9 +313,11 @@ module ActionController
         end
       }
 
-      committed = nil
-      until committed do
-        ActiveSupport::Dependencies.interlock.permit_concurrent_loads do
+      # Ensure the child thread has taken the shared lock before we release it in the parent thread
+      sharing_lock_latch.wait
+      ActiveSupport::Dependencies.interlock.permit_concurrent_loads do
+        committed = nil
+        until committed do
           committed = @_response.await_commit(0.5)
         end
       end
