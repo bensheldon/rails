@@ -487,6 +487,39 @@ class ShareLockTest < ActiveSupport::TestCase
     end
   end
 
+  def test_nested_thread_unload_deadlock
+    ready_for_unload = Concurrent::CountDownLatch.new
+    unload_complete = Concurrent::CountDownLatch.new
+
+    # Simulate outer thread with sharing lock
+    @lock.sharing do  # like executor.wrap
+      inner_thread = Thread.new do
+        ready_for_unload.count_down
+        # At this point, we're between locks, simulating code unload timing
+        unload_complete.wait
+
+        # Inner thread tries to get sharing lock and then exclusive
+        @lock.sharing do  # like executor.wrap
+          @lock.exclusive(purpose: :load) { }  # like autoloading User
+        end
+      end
+
+      # Simulate unloader thread
+      unloader = Thread.new do
+        ready_for_unload.wait
+        # Try to get an exclusive unload lock while inner_thread is between locks
+        @lock.exclusive(purpose: :unload, compatible: [:load]) { }
+        unload_complete.count_down
+      end
+
+      # Outer thread tries to wait for inner thread while holding sharing lock
+      # This simulates permit_concurrent_loads { th.join }
+      @lock.yield_shares(compatible: [:load]) do
+        inner_thread.join
+      end
+    end
+  end
+
   private
     module CustomAssertions
       SUFFICIENT_TIMEOUT = 0.2
