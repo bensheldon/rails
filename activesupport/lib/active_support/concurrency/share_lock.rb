@@ -72,20 +72,34 @@ module ActiveSupport
       # is awaiting a lock, it is not running any other code. With
       # +purpose+ matching, it is possible to yield only to other
       # threads whose activity will not interfere.
-      def start_exclusive(purpose: nil, compatible: [], no_wait: false)
+      def start_exclusive(purpose: nil, compatible: [])
         synchronize do
-          unless @exclusive_thread == Thread.current
-            if busy_for_exclusive?(purpose)
-              return false if no_wait
+          puts "start_exclusive: entering with purpose=#{purpose}"
+          puts "  sharing=#{@sharing.inspect}"
+          puts "  exclusive_thread=#{@exclusive_thread.inspect}"
+          puts "  exclusive_waiting=#{@exclusive_waiting.inspect}"
 
-              yield_shares(purpose: purpose, compatible: compatible, block_share: true) do
-                wait_for(:start_exclusive) { busy_for_exclusive?(purpose) }
-              end
+          raise "already exclusive" if @exclusive_thread
+          raise "already waiting for exclusive" if @exclusive_waiting
+
+          @exclusive_waiting = true
+          @exclusive_purpose = purpose
+          @exclusive_compatible = compatible
+
+          if busy_for_exclusive?(purpose)
+            puts "  busy_for_exclusive? returned true"
+            yield_shares(purpose: purpose, compatible: compatible, block_share: true) do
+              puts "  in yield_shares, about to wait_for"
+              wait_for(:start_exclusive) {
+                busy = busy_for_exclusive?(purpose)
+                puts "    busy_for_exclusive? returned #{busy}"
+                busy
+              }
             end
-            @exclusive_thread = Thread.current
           end
-          @exclusive_depth += 1
 
+          @exclusive_thread = Thread.current
+          @exclusive_depth += 1
           true
         end
       end
@@ -201,8 +215,13 @@ module ActiveSupport
       private
         # Must be called within synchronize
         def busy_for_exclusive?(purpose)
-          busy_for_sharing?(purpose) ||
-            @sharing.size > (@sharing[Thread.current] > 0 ? 1 : 0)
+          busy = @sharing.any? { |k, n|
+            is_busy = n > 0 && k != Thread.current
+            puts "    checking #{k.inspect}: n=#{n}, current=#{Thread.current.inspect}, busy=#{is_busy}"
+            is_busy
+          }
+          puts "  busy_for_exclusive?: sharing=#{@sharing.inspect}, result=#{busy}"
+          busy
         end
 
         def busy_for_sharing?(purpose)

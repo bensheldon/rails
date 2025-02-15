@@ -488,36 +488,45 @@ class ShareLockTest < ActiveSupport::TestCase
   end
 
   def test_nested_thread_unload_deadlock
-    ready_for_unload = Concurrent::CountDownLatch.new
-    unload_complete = Concurrent::CountDownLatch.new
+    ready_for_unload = Concurrent::CountDownLatch.new(2)
+
+    outer = Thread.current
+
+    # Simulate unloader thread
+    unloader = Thread.new do
+      ready_for_unload.wait
+      # Rails.application.reloader.reload! does this:
+      @lock.sharing do # <-- sharing + exclusive seems to be the problem
+        @lock.exclusive(purpose: :unload, compatible: [:load, :unload], after_compatible: [:load, :unload]) { nil }  # Then does the actual unload
+      end
+    end
 
     # Simulate outer thread with sharing lock
-    @lock.sharing do  # like executor.wrap
+    @lock.sharing do  # executor's sharing lock
       inner_thread = Thread.new do
         ready_for_unload.count_down
-        # At this point, we're between locks, simulating code unload timing
-        unload_complete.wait
+        sleep 1 # Give unloader time to attempt lock
 
-        # Inner thread tries to get sharing lock and then exclusive
-        @lock.sharing do  # like executor.wrap
-          @lock.exclusive(purpose: :load) { }  # like autoloading User
+        # # Verify the unloader is waiting for the exclusive lock
+        @lock.raw_state do |state|
+          unloader_state = state[unloader]
+          raise "unloader is not waiting as expected" unless unloader_state[:waiting] && unloader_state[:sleeper] == :start_exclusive
+        end
+
+        @lock.sharing do  # executor's sharing lock
+          # @lock.exclusive(purpose: :load, compatible: [:load], after_compatible: [:load]) { }  # autoloading
         end
       end
 
-      # Simulate unloader thread
-      unloader = Thread.new do
-        ready_for_unload.wait
-        # Try to get an exclusive unload lock while inner_thread is between locks
-        @lock.exclusive(purpose: :unload, compatible: [:load]) { }
-        unload_complete.count_down
-      end
-
       # Outer thread tries to wait for inner thread while holding sharing lock
-      # This simulates permit_concurrent_loads { th.join }
-      @lock.yield_shares(compatible: [:load]) do
+      @lock.yield_shares(compatible: [:load, false]) do # <-- the false matches the reproduction script, but doesn't seem to be the problem
+        ready_for_unload.count_down
+        assert_threads_stuck [inner_thread, unloader]
         inner_thread.join
       end
     end
+
+    unloader.join
   end
 
   private
