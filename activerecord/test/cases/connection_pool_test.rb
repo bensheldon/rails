@@ -628,6 +628,72 @@ module ActiveRecord
         pool.checkin connection
       end
 
+      def test_schema_cache_is_shared_between_pools_with_same_db_config
+        # Get the database configuration
+        db_config = ActiveRecord::Base.configurations.configs_for(env_name: "arunit", name: "primary")
+        
+        writing_pool_config = ActiveRecord::ConnectionAdapters::PoolConfig.new(
+          ActiveRecord::Base,
+          db_config,
+          :writing,
+          :default
+        )
+        reading_pool_config = ActiveRecord::ConnectionAdapters::PoolConfig.new(
+          ActiveRecord::Base,
+          db_config,
+          :reading,
+          :default
+        )
+        
+        writing_pool = ActiveRecord::ConnectionAdapters::ConnectionPool.new(writing_pool_config)
+        reading_pool = ActiveRecord::ConnectionAdapters::ConnectionPool.new(reading_pool_config)
+        
+        assert_not_same writing_pool, reading_pool
+        
+        writing_pool.schema_cache.add(:posts)
+        
+        assert writing_pool.schema_cache.cached?(:posts)
+        assert reading_pool.schema_cache.cached?(:posts)
+        
+        assert_same writing_pool.schema_reflection, reading_pool.schema_reflection
+        
+        writing_pool.disconnect!
+        reading_pool.disconnect!
+      end
+
+      def test_schema_cache_is_not_shared_between_pools_with_different_db_configs
+        first_db_config = ActiveRecord::Base.configurations.configs_for(env_name: "arunit", name: "primary")
+        second_db_config = ActiveRecord::Base.configurations.configs_for(env_name: "arunit2", name: "primary")
+        
+        first_pool_config = ActiveRecord::ConnectionAdapters::PoolConfig.new(
+          ActiveRecord::Base,
+          first_db_config,
+          :writing,
+          :default
+        )
+        second_pool_config = ActiveRecord::ConnectionAdapters::PoolConfig.new(
+          ActiveRecord::Base,
+          second_db_config,
+          :writing,
+          :default
+        )
+        
+        first_pool = ActiveRecord::ConnectionAdapters::ConnectionPool.new(first_pool_config)
+        second_pool = ActiveRecord::ConnectionAdapters::ConnectionPool.new(second_pool_config)
+        
+        assert_not_same first_pool, second_pool
+        
+        first_pool.schema_cache.add(:posts)
+        
+        assert first_pool.schema_cache.cached?(:posts)
+        assert_not second_pool.schema_cache.cached?(:posts)
+        
+        assert_not_same first_pool.schema_reflection, second_pool.schema_reflection
+        
+        first_pool.disconnect!
+        second_pool.disconnect!
+      end
+
       def test_concurrent_connection_establishment
         skip_fiber_testing
         assert_operator @pool.connections.size, :<=, 1

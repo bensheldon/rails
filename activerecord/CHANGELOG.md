@@ -1,3 +1,7 @@
+*   Share schema cache between database connection pools that reference a compatible replica or shard.
+
+    *Ben Sheldon*, *Issy Long*
+
 *   Deprecate using `insert_all`/`upsert_all` with unpersisted records in associations.
 
     Using these methods on associations containing unpersisted records will now
