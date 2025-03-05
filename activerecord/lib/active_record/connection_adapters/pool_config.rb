@@ -9,8 +9,15 @@ module ActiveRecord
       attr_writer :schema_reflection, :server_version
       attr_accessor :connection_class
 
+      SCHEMA_REFLECTION_REGISTRY = Concurrent::Map.new
+      private_constant :SCHEMA_REFLECTION_REGISTRY
+
       def schema_reflection
-        @schema_reflection ||= SchemaReflection.new(db_config.lazy_schema_cache_path)
+        @schema_reflection ||= begin
+          SCHEMA_REFLECTION_REGISTRY.compute_if_absent(schema_reflection_identity) do
+            SchemaReflection.new(db_config.lazy_schema_cache_path)
+          end
+        end
       end
 
       INSTANCES = ObjectSpace::WeakMap.new
@@ -76,6 +83,15 @@ module ActiveRecord
           @pool = nil
         end
       end
+
+      private
+
+        def schema_reflection_identity
+          @schema_reflection_identity ||= db_config.configuration_hash.except(
+            "role", "replica", "pool", "pool_config", "name", "reaping_frequency",
+            "checkout_timeout", "idle_timeout", "max_pool_size", "min_pool_size"
+          ).hash
+        end
     end
   end
 end
