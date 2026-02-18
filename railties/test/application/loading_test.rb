@@ -562,6 +562,36 @@ class LoadingTest < ActiveSupport::TestCase
     assert_equal "Query cache is enabled.", last_response.body
   end
 
+
+  test "rails framework constants marked for autoloading are not loaded during initialization" do
+    def recursively_collect_autoloaded_constants(mod = Object, all_constants = Set.new, autoloaded_constants = Set.new)
+      return unless mod.respond_to?(:constants) && mod.respond_to?(:autoload?)
+
+      mod.constants.each do |const|
+        full_const = "#{mod}::#{const}"
+        next if all_constants.include?(full_const)
+
+        all_constants << full_const
+        if mod.autoload?(const)
+          autoloaded_constants << full_const
+        else
+          recursively_collect_autoloaded_constants(mod.const_get(const), all_constants, autoloaded_constants) rescue nil
+        end
+      end
+
+      autoloaded_constants
+    end
+
+    autoloaded_constants = recursively_collect_autoloaded_constants
+    boot_app("development")
+    loaded_autoloaded_constants = autoloaded_constants - recursively_collect_autoloaded_constants
+
+    if loaded_autoloaded_constants.any?
+      fail "The following constants were marked for autoloading but were loaded during initialization:\n" +
+           loaded_autoloaded_constants.map { |mod| "  #{mod}" }.sort.join("\n")
+    end
+  end
+
   private
     def setup_ar!
       ActiveRecord::Base.establish_connection
