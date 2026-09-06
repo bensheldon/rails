@@ -1,0 +1,99 @@
+<%= form_with(model: product, class: "product-form") do |form| %>
+  <% if product.errors.any? %>
+    <div class="error-summary" role="alert">
+      <h2><%= pluralize(product.errors.count, "error") %> prohibited this product from being saved:</h2>
+      <ul>
+        <% product.errors.each do |error| %>
+          <li>
+            <code><%= error.attribute %></code>
+            <%= error.full_message %>
+          </li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="field">
+    <%= form.label :name %>
+    <%= form.text_field :name %>
+    <%= inline_errors form, :name %>
+  </div>
+
+  <fieldset>
+    <legend>Price</legend>
+    <p class="pattern">Attributes API · one column · <code>attribute :price, MoneyType.new</code></p>
+    <p class="hint">
+      A text field, not a number field, so you can type <code>$1,234.56</code> or <code>abc</code>.
+      Invalid input is kept in <code>price_before_type_cast</code> and re-rendered so the user can fix it.
+    </p>
+    <div class="field">
+      <%= form.label :price %>
+      <%= form.text_field :price, inputmode: "decimal" %>
+      <%= inline_errors form, :price %>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Address</legend>
+    <p class="pattern">composed_of · three columns · nested fields, errors keyed <code>address.street</code></p>
+    <p class="hint">
+      <code>fields_for :address</code> posts <code>product[address][street]</code>, which the
+      <code>converter:</code> turns into an <code>Address</code>. The builder's object is the value
+      object itself, so it renders its own errors.
+    </p>
+    <%= form.fields_for :address, product.address do |address_form| %>
+      <div class="field">
+        <%= address_form.label :street %>
+        <%= address_form.text_field :street %>
+        <%= inline_errors address_form, :street %>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <%= address_form.label :city %>
+          <%= address_form.text_field :city %>
+          <%= inline_errors address_form, :city %>
+        </div>
+        <div class="field">
+          <%= address_form.label :postal_code, "ZIP code" %>
+          <%= address_form.text_field :postal_code, size: 12 %>
+          <%= inline_errors address_form, :postal_code %>
+        </div>
+      </div>
+    <% end %>
+    <%= inline_errors form, :address %>
+  </fieldset>
+
+  <fieldset>
+    <legend>Dimensions</legend>
+    <p class="pattern">composed_of · three columns · plain column fields, errors keyed <code>width_cm</code></p>
+    <p class="hint">
+      Fields bind straight to the columns. <code>Dimensions</code> still validates itself; the
+      <code>ComposedValidator</code> re-keys each error to its column via the <code>composed_of</code>
+      mapping, and the cross-field carrier-limit error lands on <code>:dimensions</code>.
+      Leave all three blank for "no dimensions".
+    </p>
+    <div class="field-row">
+      <div class="field">
+        <%= form.label :width_cm, "Width (cm)" %>
+        <%= form.text_field :width_cm, inputmode: "decimal", size: 8 %>
+        <%= inline_errors form, :width_cm %>
+      </div>
+      <div class="field">
+        <%= form.label :height_cm, "Height (cm)" %>
+        <%= form.text_field :height_cm, inputmode: "decimal", size: 8 %>
+        <%= inline_errors form, :height_cm %>
+      </div>
+      <div class="field">
+        <%= form.label :depth_cm, "Depth (cm)" %>
+        <%= form.text_field :depth_cm, inputmode: "decimal", size: 8 %>
+        <%= inline_errors form, :depth_cm %>
+      </div>
+    </div>
+    <%= inline_errors form, :dimensions %>
+  </fieldset>
+
+  <div class="actions">
+    <%= form.submit %>
+    <%= link_to "Cancel", product.persisted? ? product : products_path %>
+  </div>
+<% end %>

@@ -1,0 +1,81 @@
+:root {
+  --ink: #1f2933;
+  --muted: #616e7c;
+  --line: #d9dee3;
+  --accent: #2456c4;
+  --error: #b3261e;
+  --error-bg: #fdecea;
+  --panel: #f7f8fa;
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: #fff;
+}
+
+main { max-width: 56rem; margin: 0 auto; padding: 1.5rem; }
+
+.site-header {
+  display: flex; justify-content: space-between; align-items: center; gap: 1rem;
+  padding: 0.75rem 1.5rem; border-bottom: 1px solid var(--line); background: var(--panel);
+}
+.site-header .brand { font-weight: 600; color: var(--ink); text-decoration: none; }
+.site-header nav a { margin-left: 1rem; }
+
+a { color: var(--accent); }
+code { font-size: 0.85em; background: var(--panel); padding: 0.1em 0.35em; border-radius: 3px; }
+small { color: var(--muted); font-weight: normal; }
+.lede, .hint { color: var(--muted); }
+.hint { font-size: 0.9rem; margin: 0 0 0.75rem; }
+.crumbs { color: var(--muted); font-size: 0.9rem; }
+.notice { padding: 0.5rem 0.75rem; background: #e7f3e8; border: 1px solid #b7dcbd; border-radius: 4px; }
+
+table { border-collapse: collapse; width: 100%; }
+th, td { text-align: left; padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.03em; }
+
+dl { display: grid; grid-template-columns: max-content 1fr; gap: 0.5rem 1.5rem; }
+dt { font-weight: 600; }
+dd { margin: 0; }
+dd code { margin-left: 0.5rem; }
+.product details { margin-top: 1rem; }
+
+fieldset { border: 1px solid var(--line); border-radius: 6px; padding: 1rem 1.25rem; margin: 1.25rem 0; }
+legend { font-weight: 600; padding: 0 0.4rem; }
+.pattern { margin: -0.25rem 0 0.5rem; color: var(--muted); font-size: 0.8rem; }
+
+.field { margin-bottom: 0.9rem; }
+.field-row { display: flex; gap: 1.25rem; flex-wrap: wrap; }
+label { display: block; font-weight: 600; font-size: 0.9rem; margin-bottom: 0.2rem; }
+input[type="text"] {
+  font: inherit; padding: 0.4rem 0.6rem; border: 1px solid var(--line); border-radius: 4px; min-width: 12rem;
+}
+input[type="text"]:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* Rails wraps a field (and its label) in this when object.errors[attribute] is present. */
+.field_with_errors { display: contents; }
+.field_with_errors label { color: var(--error); }
+.field_with_errors input { border-color: var(--error); background: var(--error-bg); }
+
+.inline-errors { list-style: none; margin: 0.25rem 0 0; padding: 0; color: var(--error); font-size: 0.85rem; }
+
+.error-summary {
+  border: 1px solid var(--error); background: var(--error-bg); color: var(--error);
+  border-radius: 6px; padding: 0.75rem 1rem; margin-bottom: 1.25rem;
+}
+.error-summary h2 { font-size: 1rem; margin: 0 0 0.4rem; }
+.error-summary ul { margin: 0; padding-left: 1.25rem; }
+.error-summary code { background: #fff; margin-right: 0.35rem; }
+
+.actions { display: flex; gap: 1rem; align-items: center; margin-top: 1.25rem; }
+.actions form { display: inline; }
+input[type="submit"], button, .button {
+  font: inherit; padding: 0.45rem 0.9rem; border-radius: 4px; border: 1px solid var(--accent);
+  background: var(--accent); color: #fff; cursor: pointer; text-decoration: none;
+}
+.actions button[type="submit"] { background: #fff; color: var(--error); border-color: var(--error); }

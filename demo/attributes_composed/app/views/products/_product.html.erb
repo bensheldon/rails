@@ -1,0 +1,48 @@
+<div id="<%= dom_id product %>" class="product">
+  <h2><%= product.name %></h2>
+
+  <dl>
+    <dt>Price <small>(Money via Attributes API)</small></dt>
+    <dd>
+      <%= number_to_currency(product.price&.amount) %>
+      <code><%= product.price.inspect %></code>
+    </dd>
+
+    <dt>Address <small>(Address via composed_of)</small></dt>
+    <dd>
+      <% if product.address %>
+        <%= product.address %>
+        <code><%= product.address.inspect %></code>
+      <% else %>
+        <em>none</em>
+      <% end %>
+    </dd>
+
+    <dt>Dimensions <small>(Dimensions via composed_of)</small></dt>
+    <dd>
+      <% if product.dimensions %>
+        <%= product.dimensions %>
+        <small>volume <%= number_with_delimiter(product.dimensions.volume.round) %> cm³,
+        length + girth <%= product.dimensions.length_plus_girth.to_s("F").delete_suffix(".0") %> cm</small>
+        <code><%= product.dimensions.inspect %></code>
+      <% else %>
+        <em>none</em>
+      <% end %>
+    </dd>
+  </dl>
+
+  <details>
+    <summary>Raw columns</summary>
+    <table>
+      <thead><tr><th>column</th><th>value</th></tr></thead>
+      <tbody>
+        <% %w[ price address_street address_city address_postal_code width_cm height_cm depth_cm ].each do |column| %>
+          <tr>
+            <td><code><%= column %></code></td>
+            <td><code><%= product.read_attribute_before_type_cast(column).inspect %></code></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </details>
+</div>

@@ -1,0 +1,28 @@
+en:
+  errors:
+    messages:
+      # MoneyValidator
+      not_an_amount: "is not a valid amount (got %{value})"
+      negative_amount: "can't be negative"
+
+  activerecord:
+    attributes:
+      product:
+        price: Price
+        address: Address
+        dimensions: Dimensions
+        width_cm: Width
+        height_cm: Height
+        depth_cm: Depth
+      # Nested error keys ("address.street") imported by ComposedValidator look
+      # up "activerecord.attributes.product/address.street".
+      product/address:
+        street: Address street
+        city: Address city
+        postal_code: Address postal code
+
+  activemodel:
+    errors:
+      models:
+        dimensions:
+          too_large: "are too large to ship: length plus girth is %{measured} cm, the limit is %{limit} cm"

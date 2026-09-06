@@ -1,0 +1,6 @@
+<% content_for :title, "Editing #{@product.name}" %>
+
+<p class="crumbs"><%= link_to "Products", products_path %> › <%= link_to @product.name, @product %> ›</p>
+<h1>Editing <%= @product.name %></h1>
+
+<%= render "form", product: @product %>

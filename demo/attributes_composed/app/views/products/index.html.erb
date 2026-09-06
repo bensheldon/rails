@@ -1,0 +1,35 @@
+<% content_for :title, "Products" %>
+
+<h1>Products</h1>
+
+<p class="lede">
+  Each product carries three compact value objects: a <code>Money</code> price stored in a single column
+  through the Attributes API, and an <code>Address</code> and <code>Dimensions</code> each spread across
+  three columns through <code>composed_of</code>. Edit one and submit bad data to see how validation errors
+  from the value objects surface in the form.
+</p>
+
+<table class="products">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Price</th>
+      <th>Address</th>
+      <th>Dimensions</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @products.each do |product| %>
+      <tr>
+        <td><%= link_to product.name, product %></td>
+        <td><%= number_to_currency(product.price&.amount) %></td>
+        <td><%= product.address || content_tag(:em, "none") %></td>
+        <td><%= product.dimensions || content_tag(:em, "none") %></td>
+        <td><%= link_to "Edit", edit_product_path(product) %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
+<p><%= link_to "New product", new_product_path, class: "button" %></p>

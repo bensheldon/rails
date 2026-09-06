@@ -1,0 +1,10 @@
+<% content_for :title, @product.name %>
+
+<p class="crumbs"><%= link_to "Products", products_path %> ›</p>
+
+<%= render @product %>
+
+<div class="actions">
+  <%= link_to "Edit", edit_product_path(@product), class: "button" %>
+  <%= button_to "Destroy", @product, method: :delete %>
+</div>
