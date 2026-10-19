@@ -1,3 +1,11 @@
+*   Decode PostgreSQL date columns by default and deprecate `PostgreSQLAdapter.decode_dates=`.
+
+    As of Rails 7.2, date columns are decoded into `Date` objects. This
+    deprecates overriding it. Active Record used without Rails, and not setting
+    `decode_dates`, now also decodes date columns.
+
+    *Ben Sheldon*
+
 *   Truncate tables shadowed by a same-named table earlier on the PostgreSQL
     `search_path`.
 

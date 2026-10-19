@@ -143,16 +143,40 @@ module ActiveRecord
       # setting, you should immediately run `bin/rails db:migrate` to update the types in your schema.rb.
       class_attribute :datetime_type, default: :timestamp
 
-      ##
-      # :singleton-method:
+      class_attribute :_decode_dates, instance_accessor: false, default: true # :nodoc:
+
       # Toggles automatic decoding of date columns.
       #
       # ```
-      # ActiveRecord::ConnectionAdapters::PostgreSQLAdapter.select_value("select '2024-01-01'::date").class #=> String
-      # ActiveRecord::ConnectionAdapters::PostgreSQLAdapter.decode_dates = true
       # ActiveRecord::ConnectionAdapters::PostgreSQLAdapter.select_value("select '2024-01-01'::date").class #=> Date
+      # ActiveRecord::ConnectionAdapters::PostgreSQLAdapter.decode_dates = false
+      # ActiveRecord::ConnectionAdapters::PostgreSQLAdapter.select_value("select '2024-01-01'::date").class #=> String
       # ```
-      class_attribute :decode_dates, default: false
+      #
+      # Setting this is deprecated. Rails 9.0 will always decode date columns.
+      def self.decode_dates
+        _decode_dates
+      end
+
+      def self.decode_dates=(value)
+        if value
+          ActiveRecord.deprecator.warn(<<~MSG.squish)
+            `PostgreSQLAdapter.decode_dates=` is deprecated and will be removed in Rails 9.0.
+            Date columns are decoded by default.
+          MSG
+        else
+          ActiveRecord.deprecator.warn(<<~MSG.squish)
+            Disabling date decoding with `PostgreSQLAdapter.decode_dates = false` is deprecated.
+            Rails 9.0 will always decode date columns into `Date` objects. In a Rails
+            application, set `config.active_record.postgresql_adapter_decode_dates = true`.
+          MSG
+        end
+        self._decode_dates = value
+      end
+
+      def decode_dates # :nodoc:
+        self.class._decode_dates
+      end
 
       ##
       # :singleton-method:

@@ -1534,20 +1534,34 @@ module ActiveRecord
       def test_date_decoding_enabled
         db_config = ActiveRecord::Base.configurations.configs_for(env_name: "arunit", name: "primary")
         with_postgresql_adapter(db_config.configuration_hash) do |connection|
-          with_postgresql_apdater_decode_dates do
-            date = connection.select_value("select '2024-01-01'::date")
-            assert_equal Date.new(2024, 01, 01), date
-            assert_equal Date, date.class
-          end
+          date = connection.select_value("select '2024-01-01'::date")
+          assert_equal Date.new(2024, 01, 01), date
+          assert_equal Date, date.class
         end
       end
 
       def test_date_decoding_disabled
         db_config = ActiveRecord::Base.configurations.configs_for(env_name: "arunit", name: "primary")
-        with_postgresql_adapter(db_config.configuration_hash) do |connection|
-          date = connection.select_value("select '2024-01-01'::date")
-          assert_equal "2024-01-01", date
-          assert_equal String, date.class
+        PostgreSQLAdapter.with(_decode_dates: false) do
+          with_postgresql_adapter(db_config.configuration_hash) do |connection|
+            date = connection.select_value("select '2024-01-01'::date")
+            assert_equal "2024-01-01", date
+            assert_equal String, date.class
+          end
+        end
+      end
+
+      def test_disabling_decode_dates_is_deprecated
+        PostgreSQLAdapter.with(_decode_dates: true) do
+          assert_deprecated(/Disabling date decoding/, ActiveRecord.deprecator) do
+            PostgreSQLAdapter.decode_dates = false
+          end
+        end
+      end
+
+      def test_decode_dates_writer_is_deprecated
+        assert_deprecated(/`PostgreSQLAdapter.decode_dates=` is deprecated/, ActiveRecord.deprecator) do
+          PostgreSQLAdapter.decode_dates = true
         end
       end
 
@@ -1723,13 +1737,6 @@ module ActiveRecord
       end
 
       private
-        def with_postgresql_apdater_decode_dates
-          PostgreSQLAdapter.decode_dates = true
-          yield
-        ensure
-          PostgreSQLAdapter.decode_dates = false
-        end
-
         def with_example_table(definition = "id serial primary key, number integer, data character varying(255)", &block)
           super(@connection, "ex", definition, &block)
         end
