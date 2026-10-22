@@ -56,28 +56,20 @@ module ActiveRecord::Associations::Builder # :nodoc:
     end
 
     # Defines the setter and getter methods for the collection_singular_ids.
-    def self.define_readers(mixin, name)
+    def self.define_readers(owner, name)
       super
 
-      mixin.class_eval <<-CODE, __FILE__, __LINE__ + 1
-        def #{name.to_s.singularize}_ids
-          association = association(:#{name})
-          deprecated_associations_api_guard(association, __method__)
-          association.ids_reader
-        end
-      CODE
+      # The method name depends on inflections, so key the shared body by
+      # the association name instead.
+      define_association_method(owner, "#{name.to_s.singularize}_ids", name, "ids_reader",
+        namespace: :active_record_association_ids, canonical_name: name)
     end
 
-    def self.define_writers(mixin, name)
+    def self.define_writers(owner, name)
       super
 
-      mixin.class_eval <<-CODE, __FILE__, __LINE__ + 1
-        def #{name.to_s.singularize}_ids=(ids)
-          association = association(:#{name})
-          deprecated_associations_api_guard(association, __method__)
-          association.ids_writer(ids)
-        end
-      CODE
+      define_association_method(owner, "#{name.to_s.singularize}_ids=", name, "ids_writer(ids)", params: "ids",
+        namespace: :active_record_association_ids, canonical_name: "#{name}=")
     end
 
     private_class_method :valid_options, :define_callback, :define_extensions, :define_readers, :define_writers

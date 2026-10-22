@@ -34,7 +34,9 @@ module ActiveRecord::Associations::Builder # :nodoc:
       end
 
       reflection = create_reflection(model, name, scope, options, &block)
-      define_accessors(model, reflection)
+      ActiveSupport::CodeGenerator.batch(model.generated_association_methods, __FILE__, __LINE__) do |owner|
+        define_accessors(owner, reflection)
+      end
       define_callbacks(model, reflection)
       define_validations(model, reflection)
       define_change_tracking_methods(model, reflection)
@@ -101,31 +103,33 @@ module ActiveRecord::Associations::Builder # :nodoc:
     # end
     #
     # Post.first.comments and Post.first.comments= methods are defined by this method...
-    def self.define_accessors(model, reflection)
-      mixin = model.generated_association_methods
+    def self.define_accessors(owner, reflection)
       name = reflection.name
-      define_readers(mixin, name)
-      define_writers(mixin, name)
+      define_readers(owner, name)
+      define_writers(owner, name)
     end
 
-    def self.define_readers(mixin, name)
-      mixin.class_eval <<-CODE, __FILE__, __LINE__ + 1
-        def #{name}
-          association = association(:#{name})
-          deprecated_associations_api_guard(association, __method__)
-          association.reader
-        end
-      CODE
+    def self.define_readers(owner, name)
+      define_association_method(owner, name, name, "reader")
     end
 
-    def self.define_writers(mixin, name)
-      mixin.class_eval <<-CODE, __FILE__, __LINE__ + 1
-        def #{name}=(value)
-          association = association(:#{name})
-          deprecated_associations_api_guard(association, __method__)
-          association.writer(value)
-        end
-      CODE
+    def self.define_writers(owner, name)
+      define_association_method(owner, "#{name}=", name, "writer(value)", params: "value")
+    end
+
+    # Defines a method that calls +call+ on the association named +name+.
+    # The method body depends only on +method_name+ and +name+, so it is
+    # compiled once per process and shared between all models.
+    def self.define_association_method(owner, method_name, name, call, params: nil, namespace: :active_record_associations, canonical_name: method_name)
+      owner.define_cached_method(canonical_name, as: method_name, namespace: namespace) do |batch|
+        batch << <<~RUBY
+          def #{canonical_name}#{"(#{params})" if params}
+            association = association(:#{name})
+            deprecated_associations_api_guard(association, :#{method_name})
+            association.#{call}
+          end
+        RUBY
+      end
     end
 
     def self.define_validations(model, reflection)
@@ -184,7 +188,7 @@ module ActiveRecord::Associations::Builder # :nodoc:
     end
 
     private_class_method :build_scope, :macro, :valid_options, :validate_options, :define_extensions,
-      :define_callbacks, :define_accessors, :define_readers, :define_writers, :define_validations,
+      :define_callbacks, :define_accessors, :define_readers, :define_writers, :define_association_method, :define_validations,
       :define_change_tracking_methods, :valid_dependent_options, :check_dependent_options,
       :add_destroy_callbacks, :add_after_commit_jobs_callback
   end

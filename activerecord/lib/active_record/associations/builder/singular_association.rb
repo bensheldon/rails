@@ -9,49 +9,21 @@ module ActiveRecord::Associations::Builder # :nodoc:
       super + [:required, :touch]
     end
 
-    def self.define_accessors(model, reflection)
+    def self.define_accessors(owner, reflection)
       super
-      mixin = model.generated_association_methods
       name = reflection.name
 
-      define_constructors(mixin, name) unless reflection.polymorphic?
+      define_constructors(owner, name) unless reflection.polymorphic?
 
-      mixin.class_eval <<-CODE, __FILE__, __LINE__ + 1
-        def reload_#{name}
-          association = association(:#{name})
-          deprecated_associations_api_guard(association, __method__)
-          association.force_reload_reader
-        end
-
-        def reset_#{name}
-          association = association(:#{name})
-          deprecated_associations_api_guard(association, __method__)
-          association.reset
-        end
-      CODE
+      define_association_method(owner, "reload_#{name}", name, "force_reload_reader")
+      define_association_method(owner, "reset_#{name}", name, "reset")
     end
 
     # Defines the (build|create)\_association methods for belongs_to or has_one association
-    def self.define_constructors(mixin, name)
-      mixin.class_eval <<-CODE, __FILE__, __LINE__ + 1
-        def build_#{name}(*args, &block)
-          association = association(:#{name})
-          deprecated_associations_api_guard(association, __method__)
-          association.build(*args, &block)
-        end
-
-        def create_#{name}(*args, &block)
-          association = association(:#{name})
-          deprecated_associations_api_guard(association, __method__)
-          association.create(*args, &block)
-        end
-
-        def create_#{name}!(*args, &block)
-          association = association(:#{name})
-          deprecated_associations_api_guard(association, __method__)
-          association.create!(*args, &block)
-        end
-      CODE
+    def self.define_constructors(owner, name)
+      define_association_method(owner, "build_#{name}", name, "build(*args, &block)", params: "*args, &block")
+      define_association_method(owner, "create_#{name}", name, "create(*args, &block)", params: "*args, &block")
+      define_association_method(owner, "create_#{name}!", name, "create!(*args, &block)", params: "*args, &block")
     end
 
     def self.define_callbacks(model, reflection)
